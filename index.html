@@ -575,21 +575,22 @@ function drawWeightLoss() {
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
   const x = d3.scaleLinear().domain([0, 76]).range([0, width]);
-  const y = d3.scaleLinear().domain([0, -30]).range([0, height]);
+  // Inverted: 0% at bottom, bigger loss (e.g. -28%) at top
+  const y = d3.scaleLinear().domain([0, 28]).range([height, 0]);
 
   // Grid
   svg.append("g").attr("class", "grid")
     .attr("transform", `translate(0,${height})`)
     .call(d3.axisBottom(x).tickValues(WEEKS).tickSize(-height).tickFormat(""));
   svg.append("g").attr("class", "grid")
-    .call(d3.axisLeft(y).tickValues([0,-5,-10,-15,-20,-25,-30]).tickSize(-width).tickFormat(""));
+    .call(d3.axisLeft(y).tickValues([0,5,10,15,20,25]).tickSize(-width).tickFormat(""));
 
   // Axes
   svg.append("g").attr("class", "axis")
     .attr("transform", `translate(0,${height})`)
     .call(d3.axisBottom(x).tickValues(WEEKS).tickFormat(d => d + "w"));
   svg.append("g").attr("class", "axis")
-    .call(d3.axisLeft(y).ticks(7).tickFormat(d => d === 0 ? "0%" : d + "%"));
+    .call(d3.axisLeft(y).tickValues([0,5,10,15,20,25]).tickFormat(d => d + "%"));
 
   // Axis labels
   svg.append("text")
@@ -600,7 +601,7 @@ function drawWeightLoss() {
     .attr("transform", "rotate(-90)")
     .attr("x", -height / 2).attr("y", -48)
     .attr("text-anchor", "middle").attr("fill", "#666").attr("font-size", "12px")
-    .text("% Change in Body Weight");
+    .text("% Body Weight Lost");
 
   const line = d3.line()
     .defined(d => d[1] != null)
@@ -615,7 +616,7 @@ function drawWeightLoss() {
   const lineGroups = {};
   const dotGroups = {};
   DRUGS.forEach(drug => {
-    const pts = WEEKS.map(w => [w, drug.weightLoss[w] != null ? -drug.weightLoss[w] : null]).filter(d => d[1] != null);
+    const pts = WEEKS.map(w => [w, drug.weightLoss[w] ?? null]).filter(d => d[1] != null);
     if (pts.length < 2) return;
 
     const g = svg.append("g").attr("class", "drug-line-" + drug.id);
