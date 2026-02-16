@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GLP-1 Pipeline Comparison</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: #f7f4f1;
+    color: #1a1a1a;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e1e4e7;
+    padding: 28px 40px 0;
+  }
+  .page-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.5px;
+  }
+  .page-header .subtitle {
+    font-size: 15px;
+    color: #666666;
+    margin-top: 4px;
+    margin-bottom: 20px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: none;
+  }
+  .tab-btn {
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #666666;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: #356ab1; }
+  .tab-btn.active {
+    color: #356ab1;
+    border-bottom-color: #356ab1;
+    font-weight: 600;
+  }
+
+  /* Main content */
+  .main-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 28px 40px 60px;
+  }
+  .chart-container {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e1e4e7;
+    padding: 32px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .chart-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+  }
+  .chart-subtitle {
+    font-size: 13px;
+    color: #666666;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-bottom: 20px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #444444;
+    transition: opacity 0.2s, background 0.15s;
+    user-select: none;
+  }
+  .legend-item:hover { background: #f3f5f6; }
+  .legend-item.disabled { opacity: 0.3; }
+  .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: #ffffff;
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: #1a1a1a;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.15s;
+    line-height: 1.6;
+    max-width: 280px;
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip .tt-drug {
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .tooltip .tt-label { color: #666666; }
+  .tooltip .tt-value { font-weight: 600; }
+
+  /* SVG styles */
+  .axis text {
+    font-size: 11px;
+    fill: #666666;
+  }
+  .axis path, .axis line {
+    stroke: #dddddd;
+  }
+  .grid line {
+    stroke: #eeeeee;
+    stroke-dasharray: 2,3;
+  }
+  .grid path { stroke: none; }
+
+  /* Heatmap */
+  .heatmap-controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .hm-sort-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid #dddddd;
+    border-radius: 6px;
+    background: #fff;
+    color: #444;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .hm-sort-btn.active {
+    background: #356ab1;
+    color: #fff;
+    border-color: #356ab1;
+  }
+
+  /* Footer */
+  .page-footer {
+    text-align: center;
+    padding: 32px 40px;
+    font-size: 12px;
+    color: #999;
+  }
+
+  .chart-container { overflow-x: auto; }
+
+  /* Responsive */
+  @media (max-width: 800px) {
+    .page-header { padding: 20px 20px 0; }
+    .main-content { padding: 20px; }
+    .chart-container { padding: 20px; }
+    .tabs { overflow-x: auto; }
+    .tab-btn { padding: 8px 14px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>GLP-1 Pipeline Comparison</h1>
+  <p class="subtitle">Interactive visualization of weight loss, safety, and pipeline data</p>
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="weight-loss">Weight Loss Curves</button>
+    <button class="tab-btn" data-tab="responder">Responder Rates</button>
+    <button class="tab-btn" data-tab="scatter">Efficacy vs Tolerability</button>
+    <button class="tab-btn" data-tab="heatmap">Safety Heatmap</button>
+    <button class="tab-btn" data-tab="pipeline">Pipeline Timeline</button>
+  </div>
+</div>
+
+<div class="main-content">
+  <div class="tab-panel active" id="panel-weight-loss">
+    <div class="chart-container">
+      <div class="chart-title">Weight Loss Over Time</div>
+      <div class="chart-subtitle">Percentage of body weight lost at each timepoint. Lines show treatment regimen estimand. Click legend items to toggle drugs.</div>
+      <div class="legend" id="legend-wl"></div>
+      <div id="chart-wl"></div>
+    </div>
+  </div>
+  <div class="tab-panel" id="panel-responder">
+    <div class="chart-container">
+      <div class="chart-title">Responder Rates by Threshold</div>
+      <div class="chart-subtitle">Percentage of patients achieving each weight loss threshold. Click legend to toggle drugs.</div>
+      <div class="legend" id="legend-resp"></div>
+      <div id="chart-resp"></div>
+    </div>
+  </div>
+  <div class="tab-panel" id="panel-scatter">
+    <div class="chart-container">
+      <div class="chart-title">Efficacy vs Tolerability</div>
+      <div class="chart-subtitle">Headline weight loss (x) vs adverse event dropout rate (y). Bubble size = nausea rate. Bottom-right is the sweet spot: high efficacy, low dropout.</div>
+      <div id="chart-scatter"></div>
+    </div>
+  </div>
+  <div class="tab-panel" id="panel-heatmap">
+    <div class="chart-container">
+      <div class="chart-title">Safety Profile Heatmap</div>
+      <div class="chart-subtitle">Side effect rates across all drugs. Darker = higher rate. Click a sort option below.</div>
+      <div class="heatmap-controls" id="hm-controls">
+        <button class="hm-sort-btn active" data-sort="burden">Sort by AE Burden</button>
+        <button class="hm-sort-btn" data-sort="alpha">Sort Alphabetically</button>
+      </div>
+      <div id="chart-heatmap"></div>
+    </div>
+  </div>
+  <div class="tab-panel" id="panel-pipeline">
+    <div class="chart-container">
+      <div class="chart-title">Development Pipeline</div>
+      <div class="chart-subtitle">Current development phase, form factor, and expected approval timeline for each drug.</div>
+      <div id="chart-pipeline"></div>
+    </div>
+  </div>
+</div>
+
+<div class="page-footer">
+  Data from published clinical trials. Last updated February 2026.
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ===================== DATA =====================
+const DRUGS = [
+  {
+    id: "wegovy",
+    name: "Wegovy (semaglutide)",
+    shortName: "Wegovy",
+    color: "#356ab1",
+    manufacturer: "Novo",
+    formFactor: "Injectable",
+    formIcon: "💉",
+    frequency: "Weekly",
+    mechanism: "GLP-1 agonist",
+    phase: "Approved",
+    approvalYear: 2021,
+    expectedApproval: "2021 (Approved)",
+    milestone: "High-dose 7.2mg filed 11/2025",
+    weightLoss: { 4:2, 8:4, 12:6, 16:8, 20:10, 24:11.5, 36:13.5, 48:14.5, 52:14.5, 68:14.9, 72:17.5 },
+    headlineTR: 14.9,
+    headlineEff: 16.9,
+    responder: { 5:86.4, 10:69.1, 15:50.5, 20:32.0, 25:null, 30:null, 35:null },
+    leanMass: 15,
+    fatMass: 25,
+    seriousAE: 9.8,
+    aeDropout: 7.0,
+    placeboDropout: 3.1,
+    nausea: 44.2,
+    vomiting: 24.8,
+    diarrhea: 31.5,
+    dysesthesia: 23,
+  },
+  {
+    id: "wegovy-pill",
+    name: "Wegovy Pill",
+    shortName: "Wegovy Pill",
+    color: "#529afc",
+    manufacturer: "Novo",
+    formFactor: "Pill",
+    formIcon: "💊",
+    frequency: "Daily",
+    mechanism: "GLP-1 + SNAC",
+    phase: "Approved",
+    approvalYear: 2025,
+    expectedApproval: "12/2025 (Approved)",
+    milestone: "",
+    weightLoss: { 4:1.5, 8:3, 12:5, 16:6.5, 20:8, 24:9.5, 36:11.5, 48:13, 52:13.6 },
+    headlineTR: 13.6,
+    headlineEff: 16.6,
+    responder: { 5:79.2, 10:63.0, 15:50.0, 20:29.7, 25:null, 30:null, 35:null },
+    leanMass: null,
+    fatMass: null,
+    seriousAE: 3.9,
+    aeDropout: 6.9,
+    placeboDropout: null,
+    nausea: 46.6,
+    vomiting: 30.9,
+    diarrhea: 17.6,
+    dysesthesia: 4.9,
+  },
+  {
+    id: "zepbound",
+    name: "Zepbound (tirzepatide)",
+    shortName: "Zepbound",
+    color: "#119555",
+    manufacturer: "Lilly",
+    formFactor: "Injectable",
+    formIcon: "💉",
+    frequency: "Weekly",
+    mechanism: "GLP-1 + GIP agonist",
+    phase: "Approved",
+    approvalYear: 2023,
+    expectedApproval: "2023 (Approved)",
+    milestone: "",
+    weightLoss: { 4:3.5, 8:7, 12:10.5, 16:14, 20:16.5, 24:18, 36:20, 48:21.5, 72:20.9 },
+    headlineTR: 20.9,
+    headlineEff: 22.5,
+    responder: { 5:90.9, 10:83.5, 15:70.6, 20:56.7, 25:36.2, 30:null, 35:null },
+    leanMass: 10.9,
+    fatMass: 33.9,
+    seriousAE: 6.3,
+    aeDropout: 4.3,
+    placeboDropout: 2.6,
+    nausea: 31.0,
+    vomiting: 12.2,
+    diarrhea: 23.0,
+    dysesthesia: null,
+  },
+  {
+    id: "orforglipron",
+    name: "Orforglipron",
+    shortName: "Orforglipron",
+    color: "#20c86d",
+    manufacturer: "Lilly",
+    formFactor: "Pill",
+    formIcon: "💊",
+    frequency: "Daily",
+    mechanism: "Small molecule GLP-1",
+    phase: "Filed",
+    approvalYear: null,
+    expectedApproval: "Q2 2025 (FDA decision Apr 10)",
+    milestone: "FDA decision April 10, 2025",
+    weightLoss: { 4:2, 8:4, 12:5, 16:6, 20:8, 24:10, 36:12, 72:11.2 },
+    headlineTR: 11.2,
+    headlineEff: 12.4,
+    responder: { 5:71.8, 10:54.6, 15:36.0, 20:18.4, 25:null, 30:null, 35:null },
+    leanMass: 8.2,
+    fatMass: 25.7,
+    seriousAE: 3.8,
+    aeDropout: 10.3,
+    placeboDropout: 2.7,
+    nausea: 33.7,
+    vomiting: 24.0,
+    diarrhea: 23.1,
+    dysesthesia: 1.2,
+  },
+  {
+    id: "retatrutide",
+    name: "Retatrutide (12mg)",
+    shortName: "Retatrutide",
+    color: "#ff6554",
+    manufacturer: "Lilly",
+    formFactor: "Injectable",
+    formIcon: "💉",
+    frequency: "Weekly",
+    mechanism: "GLP-1 + GIP + Glucagon",
+    phase: "Phase 3",
+    approvalYear: null,
+    expectedApproval: "Late H1 2027",
+    milestone: "TRIUMPH-1 enrollment May 2026",
+    weightLoss: { 4:5, 8:9, 12:12, 16:15, 20:16, 24:17, 36:22, 48:24.2, 52:23.7 },
+    headlineTR: 23.7,
+    headlineEff: 28.7,
+    responder: { 5:100, 10:93, 15:83, 20:63, 25:58.6, 30:39.4, 35:23.7 },
+    leanMass: null,
+    fatMass: null,
+    seriousAE: 4.0,
+    aeDropout: 16.0,
+    placeboDropout: 0,
+    nausea: 43.2,
+    vomiting: 20.9,
+    diarrhea: 33.1,
+    dysesthesia: 20.9,
+  },
+  {
+    id: "cagrisema",
+    name: "CagriSema",
+    shortName: "CagriSema",
+    color: "#ffa674",
+    manufacturer: "Novo",
+    formFactor: "Injectable",
+    formIcon: "💉",
+    frequency: "Weekly",
+    mechanism: "Amylin + GLP-1 combo",
+    phase: "Filed",
+    approvalYear: null,
+    expectedApproval: "H1 2026",
+    milestone: "Phase 3 complete, filed 12/2025",
+    weightLoss: { 4:3, 8:6, 12:10, 16:14, 20:14, 24:14, 36:18, 48:20, 52:20, 72:22.7 },
+    headlineTR: 20.4,
+    headlineEff: 22.7,
+    responder: { 5:91.9, 10:83.5, 15:70.1, 20:53.6, 25:24.7, 30:19.2, 35:null },
+    leanMass: 14.4,
+    fatMass: 35.7,
+    seriousAE: 9.8,
+    aeDropout: 5.9,
+    placeboDropout: 3.5,
+    nausea: 55.0,
+    vomiting: 26.0,
+    diarrhea: 24.5,
+    dysesthesia: null,
+  },
+  {
+    id: "maritide",
+    name: "MariTide",
+    shortName: "MariTide",
+    color: "#bf569c",
+    manufacturer: "Amgen",
+    formFactor: "Injectable",
+    formIcon: "💉",
+    frequency: "Monthly",
+    mechanism: "GLP-1 agonist / GIP antagonist",
+    phase: "Phase 3",
+    approvalYear: null,
+    expectedApproval: "H1 2028",
+    milestone: "MARITIME-1 follow-up Apr 2027",
+    weightLoss: { 4:4, 8:7, 12:8, 16:10, 20:11, 24:13, 36:15, 48:18, 52:19.9 },
+    headlineTR: 16.2,
+    headlineEff: 19.9,
+    responder: { 5:null, 10:null, 15:null, 20:null, 25:null, 30:null, 35:null },
+    leanMass: 9,
+    fatMass: 33.7,
+    seriousAE: 6.0,
+    aeDropout: 12.0,
+    placeboDropout: 1.0,
+    nausea: 73.0,
+    vomiting: 44.0,
+    diarrhea: 19.0,
+    dysesthesia: null,
+  },
+  {
+    id: "vk2735",
+    name: "VK2735",
+    shortName: "VK2735",
+    color: "#bcb0c9",
+    manufacturer: "Viking",
+    formFactor: "Injectable",
+    formIcon: "💉",
+    frequency: "Weekly",
+    mechanism: "GLP-1 + GIP agonist",
+    phase: "Phase 3",
+    approvalYear: null,
+    expectedApproval: "H1 2028",
+    milestone: "VANQUISH-1 enrollment complete Jan 2026",
+    weightLoss: { 4:6, 8:10, 12:14.7 },
+    headlineTR: null,
+    headlineEff: null,
+    responder: { 5:null, 10:89, 15:null, 20:null, 25:null, 30:null, 35:null },
+    leanMass: null,
+    fatMass: null,
+    seriousAE: 3.0,
+    aeDropout: 3.0,
+    placeboDropout: 0,
+    nausea: 63.0,
+    vomiting: 29.0,
+    diarrhea: 11.0,
+    dysesthesia: null,
+  },
+  {
+    id: "ct388",
+    name: "CT-388",
+    shortName: "CT-388",
+    color: "#c0754b",
+    manufacturer: "Roche",
+    formFactor: "Injectable",
+    formIcon: "💉",
+    frequency: "Weekly",
+    mechanism: "GLP-1 + GIP agonist",
+    phase: "Phase 2",
+    approvalYear: null,
+    expectedApproval: "2029+",
+    milestone: "Phase 3 begins Q2/Q3 2026",
+    weightLoss: { 4:null, 8:null, 12:null, 48:18.3 },
+    headlineTR: 18.3,
+    headlineEff: 22.5,
+    responder: { 5:95.7, 10:87, 15:null, 20:47.8, 25:null, 30:26.1, 35:null },
+    leanMass: null,
+    fatMass: null,
+    seriousAE: null,
+    aeDropout: 5.9,
+    placeboDropout: 1.3,
+    nausea: null,
+    vomiting: null,
+    diarrhea: null,
+    dysesthesia: null,
+  },
+];
+
+// ===================== SHARED =====================
+const tooltip = d3.select("#tooltip");
+const WEEKS = [4, 8, 12, 16, 20, 24, 36, 48, 52, 68, 72];
+const THRESHOLDS = [5, 10, 15, 20, 25, 30, 35];
+
+function showTooltip(html, event) {
+  tooltip.html(html).classed("visible", true);
+  const tt = tooltip.node();
+  const rect = tt.getBoundingClientRect();
+  let x = event.pageX + 14;
+  let y = event.pageY - 14;
+  if (x + rect.width > window.innerWidth - 10) x = event.pageX - rect.width - 14;
+  if (y + rect.height > window.innerHeight + window.scrollY - 10) y = event.pageY - rect.height - 14;
+  tooltip.style("left", x + "px").style("top", y + "px");
+}
+function hideTooltip() { tooltip.classed("visible", false); }
+
+// ===================== TAB LOGIC =====================
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+    // Lazy-render
+    if (btn.dataset.tab === "responder" && !chartRendered.resp) { drawResponder(); chartRendered.resp = true; }
+    if (btn.dataset.tab === "scatter" && !chartRendered.scatter) { drawScatter(); chartRendered.scatter = true; }
+    if (btn.dataset.tab === "heatmap" && !chartRendered.heatmap) { drawHeatmap(); chartRendered.heatmap = true; }
+    if (btn.dataset.tab === "pipeline" && !chartRendered.pipeline) { drawPipeline(); chartRendered.pipeline = true; }
+  });
+});
+const chartRendered = { wl: false, resp: false, scatter: false, heatmap: false, pipeline: false };
+
+// ===================== 1. WEIGHT LOSS CURVES =====================
+function drawWeightLoss() {
+  const container = d3.select("#chart-wl");
+  container.selectAll("*").remove();
+  
+  const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+  const width = Math.min(container.node().clientWidth, 1100) - margin.left - margin.right;
+  const height = 480 - margin.top - margin.bottom;
+
+  const svg = container.append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("translate", `translate(${margin.left},${margin.top})`)
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleLinear().domain([0, 76]).range([0, width]);
+  const y = d3.scaleLinear().domain([0, -30]).range([0, height]);
+
+  // Grid
+  svg.append("g").attr("class", "grid")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x).tickValues(WEEKS).tickSize(-height).tickFormat(""));
+  svg.append("g").attr("class", "grid")
+    .call(d3.axisLeft(y).tickValues([0,-5,-10,-15,-20,-25,-30]).tickSize(-width).tickFormat(""));
+
+  // Axes
+  svg.append("g").attr("class", "axis")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x).tickValues(WEEKS).tickFormat(d => d + "w"));
+  svg.append("g").attr("class", "axis")
+    .call(d3.axisLeft(y).ticks(7).tickFormat(d => d === 0 ? "0%" : d + "%"));
+
+  // Axis labels
+  svg.append("text")
+    .attr("x", width / 2).attr("y", height + 42)
+    .attr("text-anchor", "middle").attr("fill", "#666").attr("font-size", "12px")
+    .text("Weeks on Treatment");
+  svg.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2).attr("y", -48)
+    .attr("text-anchor", "middle").attr("fill", "#666").attr("font-size", "12px")
+    .text("% Change in Body Weight");
+
+  const line = d3.line()
+    .defined(d => d[1] != null)
+    .x(d => x(d[0]))
+    .y(d => y(d[1]))
+    .curve(d3.curveMonotoneX);
+
+  const drugState = {};
+  DRUGS.forEach(d => { drugState[d.id] = true; });
+
+  // Draw lines
+  const lineGroups = {};
+  const dotGroups = {};
+  DRUGS.forEach(drug => {
+    const pts = WEEKS.map(w => [w, drug.weightLoss[w] != null ? -drug.weightLoss[w] : null]).filter(d => d[1] != null);
+    if (pts.length < 2) return;
+
+    const g = svg.append("g").attr("class", "drug-line-" + drug.id);
+    // Line
+    const path = g.append("path")
+      .datum(pts)
+      .attr("fill", "none")
+      .attr("stroke", drug.color)
+      .attr("stroke-width", 2.5)
+      .attr("d", line)
+      .attr("stroke-linecap", "round");
+    // Animate in
+    const totalLength = path.node().getTotalLength();
+    path.attr("stroke-dasharray", totalLength)
+      .attr("stroke-dashoffset", totalLength)
+      .transition().duration(1200).ease(d3.easeCubicOut)
+      .attr("stroke-dashoffset", 0);
+
+    // Dots
+    const dots = g.selectAll("circle").data(pts).enter().append("circle")
+      .attr("cx", d => x(d[0]))
+      .attr("cy", d => y(d[1]))
+      .attr("r", 0)
+      .attr("fill", drug.color)
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 1.5);
+    dots.transition().delay((d,i) => 300 + i * 80).duration(300)
+      .attr("r", 4);
+    dots.on("mouseover", (event, d) => {
+      d3.select(event.target).attr("r", 6);
+      showTooltip(`<div class="tt-drug" style="color:${drug.color}">${drug.shortName}</div>
+        <div class="tt-row"><span class="tt-label">Week</span><span class="tt-value">${d[0]}</span></div>
+        <div class="tt-row"><span class="tt-label">Weight Loss</span><span class="tt-value">${d[1].toFixed(1)}%</span></div>`, event);
+    }).on("mouseout", (event) => {
+      d3.select(event.target).attr("r", 4);
+      hideTooltip();
+    });
+
+    lineGroups[drug.id] = path;
+    dotGroups[drug.id] = dots;
+  });
+
+  // Legend
+  const legend = d3.select("#legend-wl");
+  legend.selectAll("*").remove();
+  DRUGS.forEach(drug => {
+    const pts = WEEKS.map(w => [w, drug.weightLoss[w] ?? null]).filter(d => d[1] != null);
+    if (pts.length < 2) return;
+    const item = legend.append("div").attr("class", "legend-item").on("click", () => {
+      drugState[drug.id] = !drugState[drug.id];
+      item.classed("disabled", !drugState[drug.id]);
+      const g = svg.select(".drug-line-" + drug.id);
+      g.transition().duration(400).style("opacity", drugState[drug.id] ? 1 : 0);
+    });
+    item.append("div").attr("class", "legend-swatch").style("background", drug.color);
+    let label = drug.shortName;
+    if (drug.id === "retatrutide") label += " (12mg, TRIUMPH-4)";
+    item.append("span").text(label);
+  });
+}
+
+// ===================== 2. RESPONDER RATE BARS =====================
+function drawResponder() {
+  const container = d3.select("#chart-resp");
+  container.selectAll("*").remove();
+
+  const drugsWithData = DRUGS.filter(d => THRESHOLDS.some(t => d.responder[t] != null));
+  const drugState = {};
+  drugsWithData.forEach(d => drugState[d.id] = true);
+
+  const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+  const width = Math.min(container.node().clientWidth, 1100) - margin.left - margin.right;
+  const height = 460 - margin.top - margin.bottom;
+
+  const svg = container.append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const thresholdLabels = THRESHOLDS.map(t => `≥${t}%`);
+
+  function renderBars() {
+    svg.selectAll("*").remove();
+    const activeDrugs = drugsWithData.filter(d => drugState[d.id]);
+
+    const x0 = d3.scaleBand().domain(thresholdLabels).range([0, width]).paddingInner(0.2).paddingOuter(0.1);
+    const x1 = d3.scaleBand().domain(activeDrugs.map(d => d.id)).range([0, x0.bandwidth()]).padding(0.08);
+    const y = d3.scaleLinear().domain([0, 105]).range([height, 0]);
+
+    // Grid
+    svg.append("g").attr("class", "grid")
+      .call(d3.axisLeft(y).ticks(5).tickSize(-width).tickFormat(""));
+
+    // Axes
+    svg.append("g").attr("class", "axis").attr("transform", `translate(0,${height})`)
+      .call(d3.axisBottom(x0));
+    svg.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(5).tickFormat(d => d + "%"));
+
+    svg.append("text").attr("x", width/2).attr("y", height + 42)
+      .attr("text-anchor","middle").attr("fill","#666").attr("font-size","12px")
+      .text("Weight Loss Threshold");
+    svg.append("text").attr("transform","rotate(-90)").attr("x",-height/2).attr("y",-48)
+      .attr("text-anchor","middle").attr("fill","#666").attr("font-size","12px")
+      .text("% of Patients");
+
+    THRESHOLDS.forEach((t, ti) => {
+      const label = thresholdLabels[ti];
+      activeDrugs.forEach(drug => {
+        const val = drug.responder[t];
+        if (val == null) return;
+        svg.append("rect")
+          .attr("x", x0(label) + x1(drug.id))
+          .attr("y", height)
+          .attr("width", x1.bandwidth())
+          .attr("height", 0)
+          .attr("fill", drug.color)
+          .attr("rx", 2)
+          .on("mouseover", (event) => {
+            showTooltip(`<div class="tt-drug" style="color:${drug.color}">${drug.shortName}</div>
+              <div class="tt-row"><span class="tt-label">Threshold</span><span class="tt-value">≥${t}% WL</span></div>
+              <div class="tt-row"><span class="tt-label">Patients</span><span class="tt-value">${val.toFixed(1)}%</span></div>`, event);
+          })
+          .on("mouseout", hideTooltip)
+          .transition().duration(600).delay(ti * 60)
+          .attr("y", y(val))
+          .attr("height", height - y(val));
+      });
+    });
+  }
+
+  renderBars();
+
+  // Legend
+  const legend = d3.select("#legend-resp");
+  legend.selectAll("*").remove();
+  drugsWithData.forEach(drug => {
+    const item = legend.append("div").attr("class","legend-item").on("click", () => {
+      drugState[drug.id] = !drugState[drug.id];
+      item.classed("disabled", !drugState[drug.id]);
+      renderBars();
+    });
+    item.append("div").attr("class","legend-swatch").style("background", drug.color);
+    item.append("span").text(drug.shortName);
+  });
+}
+
+// ===================== 3. SCATTER =====================
+function drawScatter() {
+  const container = d3.select("#chart-scatter");
+  container.selectAll("*").remove();
+
+  const scatterDrugs = DRUGS.filter(d => d.headlineTR != null && d.aeDropout != null);
+
+  const margin = { top: 20, right: 140, bottom: 50, left: 60 };
+  const width = Math.min(container.node().clientWidth, 1100) - margin.left - margin.right;
+  const height = 480 - margin.top - margin.bottom;
+
+  const svg = container.append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleLinear().domain([8, 28]).range([0, width]);
+  const y = d3.scaleLinear().domain([0, 20]).range([height, 0]);
+  const r = d3.scaleSqrt().domain([0, 80]).range([6, 40]);
+
+  // Sweet spot shading
+  svg.append("rect")
+    .attr("x", x(16)).attr("y", y(10))
+    .attr("width", x(28) - x(16)).attr("height", y(0) - y(10))
+    .attr("fill", "#e5f2f2").attr("opacity", 0.6);
+  svg.append("text").attr("x", x(22)).attr("y", y(1)).attr("text-anchor","middle")
+    .attr("fill","#add8d5").attr("font-size","11px").attr("font-weight","600")
+    .text("Sweet Spot: High Efficacy, Low Dropout");
+
+  // Quadrant lines
+  svg.append("line").attr("x1",x(16)).attr("x2",x(16)).attr("y1",0).attr("y2",height)
+    .attr("stroke","#dddddd").attr("stroke-dasharray","4,4");
+  svg.append("line").attr("x1",0).attr("x2",width).attr("y1",y(10)).attr("y2",y(10))
+    .attr("stroke","#dddddd").attr("stroke-dasharray","4,4");
+
+  // Grid
+  svg.append("g").attr("class","grid").attr("transform",`translate(0,${height})`)
+    .call(d3.axisBottom(x).ticks(8).tickSize(-height).tickFormat(""));
+  svg.append("g").attr("class","grid")
+    .call(d3.axisLeft(y).ticks(5).tickSize(-width).tickFormat(""));
+
+  // Axes
+  svg.append("g").attr("class","axis").attr("transform",`translate(0,${height})`)
+    .call(d3.axisBottom(x).ticks(8).tickFormat(d => d + "%"));
+  svg.append("g").attr("class","axis").call(d3.axisLeft(y).ticks(5).tickFormat(d => d + "%"));
+
+  svg.append("text").attr("x",width/2).attr("y",height+42).attr("text-anchor","middle")
+    .attr("fill","#666").attr("font-size","12px").text("Headline Weight Loss (Treatment Regimen %)");
+  svg.append("text").attr("transform","rotate(-90)").attr("x",-height/2).attr("y",-48)
+    .attr("text-anchor","middle").attr("fill","#666").attr("font-size","12px").text("AE Dropout Rate %");
+
+  // Bubbles
+  scatterDrugs.forEach((drug, i) => {
+    const nauseaVal = drug.nausea || 30;
+    const g = svg.append("g");
+    g.append("circle")
+      .attr("cx", x(drug.headlineTR))
+      .attr("cy", y(drug.aeDropout))
+      .attr("r", 0)
+      .attr("fill", drug.color)
+      .attr("fill-opacity", 0.4)
+      .attr("stroke", drug.color)
+      .attr("stroke-width", 2)
+      .on("mouseover", (event) => {
+        d3.select(event.target).attr("fill-opacity", 0.6);
+        showTooltip(`<div class="tt-drug" style="color:${drug.color}">${drug.shortName}</div>
+          <div class="tt-row"><span class="tt-label">Weight Loss</span><span class="tt-value">${drug.headlineTR}%</span></div>
+          <div class="tt-row"><span class="tt-label">AE Dropout</span><span class="tt-value">${drug.aeDropout}%</span></div>
+          <div class="tt-row"><span class="tt-label">Nausea</span><span class="tt-value">${drug.nausea != null ? drug.nausea + '%' : 'N/A'}</span></div>`, event);
+      })
+      .on("mouseout", (event) => {
+        d3.select(event.target).attr("fill-opacity", 0.4);
+        hideTooltip();
+      })
+      .transition().delay(i * 80).duration(500).ease(d3.easeBackOut)
+      .attr("r", r(nauseaVal));
+
+    // Label
+    const labelX = x(drug.headlineTR);
+    const labelY = y(drug.aeDropout) - r(nauseaVal) - 6;
+    g.append("text")
+      .attr("x", labelX).attr("y", labelY)
+      .attr("text-anchor", "middle")
+      .attr("fill", drug.color)
+      .attr("font-size", "11px")
+      .attr("font-weight", "600")
+      .text(drug.shortName)
+      .attr("opacity", 0)
+      .transition().delay(i * 80 + 300).duration(300).attr("opacity", 1);
+  });
+
+  // Bubble size legend
+  const blegend = svg.append("g").attr("transform", `translate(${width + 20}, 20)`);
+  blegend.append("text").attr("font-size","11px").attr("font-weight","600").attr("fill","#444").text("Bubble = Nausea %");
+  [20, 40, 60].forEach((val, i) => {
+    const cy = 36 + i * 30;
+    blegend.append("circle").attr("cx", 20).attr("cy", cy).attr("r", r(val))
+      .attr("fill","none").attr("stroke","#bac3d3").attr("stroke-width",1);
+    blegend.append("text").attr("x", 46).attr("y", cy + 4)
+      .attr("font-size","10px").attr("fill","#666").text(val + "%");
+  });
+}
+
+// ===================== 4. HEATMAP =====================
+function drawHeatmap(sortMode) {
+  sortMode = sortMode || "burden";
+  const container = d3.select("#chart-heatmap");
+  container.selectAll("*").remove();
+
+  const cols = ["Nausea", "Vomiting", "Diarrhea", "Dysesthesia", "Serious AE", "AE Dropout"];
+  const colKeys = ["nausea", "vomiting", "diarrhea", "dysesthesia", "seriousAE", "aeDropout"];
+
+  let hmDrugs = DRUGS.filter(d => colKeys.some(k => d[k] != null));
+
+  if (sortMode === "burden") {
+    hmDrugs.sort((a, b) => {
+      const sumA = colKeys.reduce((s, k) => s + (a[k] || 0), 0);
+      const sumB = colKeys.reduce((s, k) => s + (b[k] || 0), 0);
+      return sumB - sumA;
+    });
+  } else {
+    hmDrugs.sort((a, b) => a.shortName.localeCompare(b.shortName));
+  }
+
+  const margin = { top: 60, right: 20, bottom: 20, left: 130 };
+  const cellW = 100, cellH = 44;
+  const width = cols.length * cellW;
+  const height = hmDrugs.length * cellH;
+
+  const svg = container.append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const color = d3.scaleSequential()
+    .domain([0, 80])
+    .interpolator(t => d3.interpolateRgb("#ffffff", "#ff6554")(t));
+
+  // Column headers
+  cols.forEach((col, ci) => {
+    svg.append("text")
+      .attr("x", ci * cellW + cellW / 2)
+      .attr("y", -14)
+      .attr("text-anchor", "middle")
+      .attr("font-size", "11.5px")
+      .attr("font-weight", "600")
+      .attr("fill", "#444")
+      .text(col + " %");
+  });
+
+  // Rows
+  hmDrugs.forEach((drug, ri) => {
+    // Drug label
+    svg.append("text")
+      .attr("x", -10)
+      .attr("y", ri * cellH + cellH / 2 + 4)
+      .attr("text-anchor", "end")
+      .attr("font-size", "12px")
+      .attr("font-weight", "500")
+      .attr("fill", drug.color)
+      .text(drug.shortName);
+
+    colKeys.forEach((key, ci) => {
+      const val = drug[key];
+      svg.append("rect")
+        .attr("x", ci * cellW + 2)
+        .attr("y", ri * cellH + 2)
+        .attr("width", cellW - 4)
+        .attr("height", cellH - 4)
+        .attr("rx", 6)
+        .attr("fill", val != null ? color(val) : "#f3f5f6")
+        .attr("stroke", "#e1e4e7")
+        .attr("stroke-width", 1)
+        .attr("opacity", 0)
+        .on("mouseover", (event) => {
+          if (val != null) {
+            showTooltip(`<div class="tt-drug" style="color:${drug.color}">${drug.shortName}</div>
+              <div class="tt-row"><span class="tt-label">${cols[ci]}</span><span class="tt-value">${val.toFixed(1)}%</span></div>`, event);
+          }
+        })
+        .on("mouseout", hideTooltip)
+        .transition().delay(ri * 40 + ci * 20).duration(300)
+        .attr("opacity", 1);
+
+      // Value text
+      svg.append("text")
+        .attr("x", ci * cellW + cellW / 2)
+        .attr("y", ri * cellH + cellH / 2 + 4)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "12px")
+        .attr("font-weight", "600")
+        .attr("fill", val != null && val > 50 ? "#fff" : "#1a1a1a")
+        .text(val != null ? val.toFixed(1) + "%" : "—")
+        .attr("opacity", 0)
+        .transition().delay(ri * 40 + ci * 20 + 100).duration(200)
+        .attr("opacity", 1);
+    });
+  });
+
+  // Color legend
+  const legendW = 200;
+  const lg = svg.append("g").attr("transform", `translate(0, ${height + 10})`);
+  const defs = svg.append("defs");
+  const grad = defs.append("linearGradient").attr("id","hm-grad");
+  grad.append("stop").attr("offset","0%").attr("stop-color","#ffffff");
+  grad.append("stop").attr("offset","100%").attr("stop-color","#ff6554");
+  lg.append("rect").attr("width", legendW).attr("height", 10).attr("rx", 3).attr("fill","url(#hm-grad)");
+  lg.append("text").attr("y", 24).attr("font-size","10px").attr("fill","#666").text("0%");
+  lg.append("text").attr("x", legendW).attr("y", 24).attr("text-anchor","end").attr("font-size","10px").attr("fill","#666").text("80%+");
+}
+
+// Heatmap sort controls
+document.querySelectorAll(".hm-sort-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".hm-sort-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    drawHeatmap(btn.dataset.sort);
+  });
+});
+
+// ===================== 5. PIPELINE TIMELINE =====================
+function drawPipeline() {
+  const container = d3.select("#chart-pipeline");
+  container.selectAll("*").remove();
+
+  const phases = ["Approved", "Filed", "Phase 3", "Phase 2"];
+  const phaseColor = { "Approved": "#e5f2f2", "Filed": "#eef7ee", "Phase 3": "#fff8ee", "Phase 2": "#fef2f0" };
+
+  const pipelineDrugs = [
+    { ...DRUGS.find(d => d.id === "wegovy"), phaseGroup: "Approved", barStart: 2021, barEnd: 2026, milestones: ["2021: FDA Approved", "2025: 7.2mg HD filed"] },
+    { ...DRUGS.find(d => d.id === "wegovy-pill"), phaseGroup: "Approved", barStart: 2025, barEnd: 2026, milestones: ["12/2025: FDA Approved"] },
+    { ...DRUGS.find(d => d.id === "zepbound"), phaseGroup: "Approved", barStart: 2023, barEnd: 2026, milestones: ["2023: FDA Approved"] },
+    { ...DRUGS.find(d => d.id === "orforglipron"), phaseGroup: "Filed", barStart: 2024, barEnd: 2026, milestones: ["Apr 2025: FDA decision"] },
+    { ...DRUGS.find(d => d.id === "cagrisema"), phaseGroup: "Filed", barStart: 2023, barEnd: 2026, milestones: ["12/2025: Filed", "H1 2026: Expected approval"] },
+    { ...DRUGS.find(d => d.id === "retatrutide"), phaseGroup: "Phase 3", barStart: 2023, barEnd: 2027, milestones: ["May 2026: Enrollment", "H1 2027: Approval target"] },
+    { ...DRUGS.find(d => d.id === "maritide"), phaseGroup: "Phase 3", barStart: 2023, barEnd: 2028, milestones: ["Apr 2027: MARITIME-1", "H1 2028: Approval target"] },
+    { ...DRUGS.find(d => d.id === "vk2735"), phaseGroup: "Phase 3", barStart: 2024, barEnd: 2028, milestones: ["Jan 2026: Enrollment done", "H1 2028: Approval target"] },
+    { ...DRUGS.find(d => d.id === "ct388"), phaseGroup: "Phase 2", barStart: 2024, barEnd: 2029, milestones: ["Q2 2026: Phase 3 start", "2029+: Approval target"] },
+  ];
+
+  const margin = { top: 40, right: 180, bottom: 40, left: 160 };
+  const rowH = 56;
+  const height = pipelineDrugs.length * rowH + phases.length * 32;
+  const containerWidth = container.node().clientWidth || 900;
+  const width = Math.max(containerWidth - margin.left - margin.right, 400);
+
+  const svgW = Math.max(width + margin.left + margin.right, 860);
+  const innerW = svgW - margin.left - margin.right;
+
+  const svg = container.append("svg")
+    .attr("width", svgW)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleLinear().domain([2020, 2030]).range([0, innerW]);
+
+  // Year axis
+  const years = [2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030];
+  svg.append("g").attr("class", "axis")
+    .call(d3.axisTop(x).tickValues(years).tickFormat(d3.format("d")).tickSize(6))
+    .selectAll("text").attr("font-size", "11px");
+  svg.select(".axis .domain").remove();
+
+  // Today line
+  const today = 2026.13; // mid-Feb 2026
+  svg.append("line")
+    .attr("x1", x(today)).attr("x2", x(today))
+    .attr("y1", 0).attr("y2", height)
+    .attr("stroke", "#ff6554").attr("stroke-width", 1.5).attr("stroke-dasharray", "4,3");
+  svg.append("text").attr("x", x(today)).attr("y", -8)
+    .attr("text-anchor", "middle").attr("font-size", "10px").attr("fill", "#ff6554").attr("font-weight", "600")
+    .text("Today");
+
+  // Year grid
+  years.forEach(yr => {
+    svg.append("line").attr("x1", x(yr)).attr("x2", x(yr))
+      .attr("y1", 10).attr("y2", height)
+      .attr("stroke", "#eeeeee").attr("stroke-width", 1);
+  });
+
+  const pipelineWidth = innerW;
+
+  let currentY = 10;
+  phases.forEach(phase => {
+    const drugs = pipelineDrugs.filter(d => d.phaseGroup === phase);
+    if (!drugs.length) return;
+
+    // Phase header
+    svg.append("rect")
+      .attr("x", -margin.left).attr("y", currentY)
+      .attr("width", pipelineWidth + margin.left + margin.right).attr("height", 24)
+      .attr("fill", phaseColor[phase] || "#f3f5f6");
+    svg.append("text")
+      .attr("x", -margin.left + 12).attr("y", currentY + 16)
+      .attr("font-size", "11px").attr("font-weight", "700").attr("fill", "#444")
+      .text(phase.toUpperCase());
+    currentY += 30;
+
+    drugs.forEach((drug, i) => {
+      const barY = currentY + 8;
+      const barH = 30;
+
+      // Drug label
+      svg.append("text")
+        .attr("x", -10).attr("y", barY + barH / 2 + 4)
+        .attr("text-anchor", "end").attr("font-size", "13px").attr("font-weight", "600")
+        .attr("fill", drug.color)
+        .text(drug.formIcon + " " + drug.shortName);
+
+      // Bar
+      svg.append("rect")
+        .attr("x", x(drug.barStart))
+        .attr("y", barY)
+        .attr("width", 0)
+        .attr("height", barH)
+        .attr("rx", 6)
+        .attr("fill", drug.color)
+        .attr("fill-opacity", 0.25)
+        .attr("stroke", drug.color)
+        .attr("stroke-width", 1.5)
+        .on("mouseover", (event) => {
+          showTooltip(`<div class="tt-drug" style="color:${drug.color}">${drug.shortName}</div>
+            <div style="font-size:11px;color:#666;margin-top:4px">${drug.milestones.join("<br>")}</div>`, event);
+        })
+        .on("mouseout", hideTooltip)
+        .transition().duration(800).delay(i * 100)
+        .attr("width", x(drug.barEnd) - x(drug.barStart));
+
+      // Frequency label inside bar
+      svg.append("text")
+        .attr("x", x(drug.barStart) + 10)
+        .attr("y", barY + barH / 2 + 4)
+        .attr("font-size", "10px").attr("fill", drug.color).attr("font-weight", "500")
+        .text(drug.frequency)
+        .attr("opacity", 0)
+        .transition().delay(600 + i * 100).duration(300).attr("opacity", 1);
+
+      // Expected approval text (inside bar, right-aligned)
+      const barEndX = x(drug.barEnd);
+      svg.append("text")
+        .attr("x", barEndX + 8)
+        .attr("y", barY + barH / 2 + 4)
+        .attr("font-size", "10px").attr("fill", "#666").attr("font-weight","500")
+        .text(drug.expectedApproval)
+        .attr("opacity", 0)
+        .transition().delay(600 + i * 100).duration(300).attr("opacity", 1);
+
+      currentY += rowH;
+    });
+  });
+}
+
+// ===================== INIT =====================
+drawWeightLoss();
+chartRendered.wl = true;
+</script>
+</body>
+</html>
